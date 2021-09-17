@@ -23,17 +23,17 @@ Example project that demonstrates using Consul service discovery with HAProxy.
    $ curl -u dataplaneapi:mypassword \
           -H 'Content-Type: application/json' \
           -d '{
-                "address": "192.168.50.21",
+                "address": "192.168.1.21",
                 "port": 8500,
                 "enabled": true,
                 "retry_timeout": 10
-              }' http://192.168.50.20:5555/v2/service_discovery/consul
+              }' http://192.168.1.20:5555/v2/service_discovery/consul
    ```
 
    which returns:
 
    ```
-   {"address":"192.168.50.21","enabled":true,"id":"1de47b93-0165-44c6-b575-818b786db51d","name":"consul","port":8500,"retry_timeout":10,"server_slots_base":10,"server_slots_growth_increment":10,"server_slots_growth_type":"linear","service-blacklist":null,"service-whitelist":null}
+   {"address":"192.168.1.21","enabled":true,"id":"1de47b93-0165-44c6-b575-818b786db51d","name":"consul","port":8500,"retry_timeout":10,"server_slots_base":10,"server_slots_growth_increment":10,"server_slots_growth_type":"linear","service-blacklist":null,"service-whitelist":null}
    ```
 
 ## How to register service
@@ -62,9 +62,9 @@ You can register more services that have the name *web* and they will be put int
 The HAProxy configuration is updated with the server:
 
 ```
-backend consul-backend-192.168.50.21-8500-web
-  server SRV_rfBd5 192.168.50.22:80 check weight 128
-  server SRV_6ti2S 192.168.50.23:80 check weight 128
+backend consul-backend-192.168.1.21-8500-web
+  server SRV_rfBd5 192.168.1.22:80 check weight 128
+  server SRV_6ti2S 192.168.1.23:80 check weight 128
   server SRV_MtYvS 127.0.0.1:80 disabled weight 128
   server SRV_gD5xA 127.0.0.1:80 disabled weight 128
   server SRV_V0YU9 127.0.0.1:80 disabled weight 128
