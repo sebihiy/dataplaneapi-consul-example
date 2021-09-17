@@ -1,0 +1,251 @@
+%title: HAProxy - HAProxy Data Plane API
+%author: ysebihi
+
+
+-> What is it ? <-
+
+<br>
+
+* Restful API to configure HAProxy.
+
+
+* Add/remove/modify fronteds/backends/servers
+
+
+* Add/remove rules
+
+
+* detection and removal of failed servers
+
+
+* offloading of TLS encryption
+
+
+
+The challenge is keeping haproxy configurations up to date
+
+
+
+
+
+
+---------------------------------------------------------------------------
+
+
+-> How do I use it ? <-
+
+
+<br>
+
+* Restful interface
+
+
+* OpenAPI interface
+  
+   * Can use OpenAPI code generators
+   * Visit '/v2/sepecification or '/v2/docs'
+
+
+
+
+---------------------------------------------------------------------------
+
+
+
+-> An Easy Way to Get Started <-
+
+<br>
+
+ How do We run it ?
+
+```
+  cat /etc/haproxy/haproxy.cfr
+
+  global
+  user haproxy
+  group haproxy
+  master-worker
+  ............
+  ............
+
+  program api
+  command /usr/local/bin/dataplaneapi -f /etc/haproxy/dataplaneapi.yaml
+  no option start-on-reload
+```
+
+  
+---------------------------------------------------------------------------
+
+-> Get the configuration version <-
+
+
+```
+curl --get --user dataplaneapi:mypassword \
+    http://192.168.1.20:5555/v2/services/haproxy/configuration/backends | python -m json.tool
+
+{
+    "_version": 5,
+    "data": [
+        {
+            "name": "consul-backend-192.168.1.21-8500-web"
+        }
+    ]
+}
+
+```
+
+
+---------------------------------------------------------------------------
+
+
+-> Transaction System :  Create a Backend with Servers <-
+
+<br>
+
+1./ Start a trsaction 
+
+```
+curl -X POST --user dataplaneapi:mypassword  -H "Content-Type: application/json" \
+
+     "http://192.168.1.20:5555/v2/services/haproxy/transactions?version=5"  | python -m json.tool 
+{
+    "_version": 5,
+    "id": "a4017070-2af7-4c77-a159-4c8c227febd9",
+    "status": "in_progress"
+}
+```
+
+2./ Create a backend
+
+```
+curl -X POST -s  --user dataplaneapi:mypassword -H "Content-Type: application/json" \
+-d '{"name": "test_backend", "mode":"http", "balance": { "algorithm": "roundrobin" }, "httpchk": {"method": "HEAD", "uri": "/", "version": "HTTP/1.1"}}' \
+
+"http://192.168.1.20:5555/v2/services/haproxy/configuration/backends?transaction_id=a4017070-2af7-4c77-a159-4c8c227febd9"  | python -m json.tool
+	   
+
+{
+    "balance": {
+        "algorithm": "roundrobin"
+    },
+    "mode": "http",
+    "name": "test_backend"
+}
+```
+
+3./ Add a Server 
+
+```
+curl -X POST --user dataplaneapi:mypassword -H "Content-Type: application/json" \
+-d '{"name": "server1", "address": "192.168.1.24", "port": 8080, "check": "enabled", "maxconn": 30, "weight": 100}' \
+
+"http://192.168.1.20:5555/v2/services/haproxy/configuration/servers?backend=test_backend&transaction_id=a4017070-2af7-4c77-a159-4c8c227febd9" | python -m json.tool
+	   
+{
+    "address": "192.168.1.24",
+    "check": "enabled",
+    "maxconn": 30,
+    "name": "server1",
+    "port": 8080,
+    "proxy-v2-options": null,
+    "weight": 100
+}
+```
+
+
+
+---------------------------------------------------------------------------
+
+-> Transaction System :  Create a Frontend and a Bind Line <-
+
+<br>
+4./ Create Frontend
+
+```
+curl -X POST --user dataplaneapi:mypassword -H "Content-Type: application/json" \
+-d '{"name": "test_frontend", "mode": "http", "default_backend": "test_backend", "maxconn": 2000}' \
+
+"http://192.168.1.20:5555/v2/services/haproxy/configuration/frontends?transaction_id=a4017070-2af7-4c77-a159-4c8c227febd9" | python -m json.tool
+	   
+
+{
+    "default_backend": "test_backend",
+    "maxconn": 2000,
+    "mode": "http",
+    "name": "test_frontend"
+}
+```
+
+5./ Add Bind
+
+```
+curl -X POST --user dataplaneapi:mypassword -H "Content-Type: application/json" \
+-d '{"name": "http", "address": "*", "port": 8080}' \
+
+"http://192.168.1.20:5555/v2/services/haproxy/configuration/binds?frontend=test_frontend&transaction_id=a4017070-2af7-4c77-a159-4c8c227febd9" | python -m json.tool
+	   
+
+{
+    "address": "*",
+    "name": "http",
+    "port": 8080
+}
+```
+
+6./ Commit the Transaction
+
+```
+curl -X PUT --user dataplaneapi:mypassword -H "Content-Type: application/json" \
+"http://192.168.1.20:5555/v2/services/haproxy/transactions/a4017070-2af7-4c77-a159-4c8c227febd9" | python -m json.tool
+
+
+
+{
+    "_version": 5,
+    "id": "a4017070-2af7-4c77-a159-4c8c227febd9",
+    "status": "success"
+}
+```
+
+---------------------------------------------------------------------------
+
+-> DEMO : HAProxy Data Plane API with Consul service discvoery <-
+
+
+<br>
+                             ###############################       #####################
+                             #                             #       #                   #
+                             #  Haproxy / Data Plane API   #########  Consul Server    #
+                             #    192.168.1.20             #       #  192.168.1.21     #
+                             ###############################       #####################
+                                           #                               #
+                                           #                               #
+                                           #                               #
+                                        ####################               #
+                                        #                  #               #
+                                        #  WebServer 01    #################          
+                                        #  192.168.1.22    #           
+                                        ####################         
+    
+
+* Enable Consul Service Discovery : enable HAProxy to use the Consul API
+
+```
+curl -u dataplaneapi:mypassword \
+       -H 'Content-Type: application/json' \
+       -d '{
+             "address": "192.168.1.21",
+             "port": 8500,
+             "enabled": true,
+             "retry_timeout": 10
+           }' http://192.168.1.20:5555/v2/service_discovery/consul
+
+{"address":"192.168.1.21","enabled":true,"id":"1de47b93-0165-44c6-b575-818b786db51d","name":"consul","port":8500,"retry_timeout":10,"server_slots_base":10,
+"server_slots_growth_increment":10,"server_slots_growth_type":"linear","service-blacklist":null,"service-whitelist":null}
+``` 
+
+* Register a Service with Consul on webserver01 VM
+
+``` 
+consul services register ./web.json
+```

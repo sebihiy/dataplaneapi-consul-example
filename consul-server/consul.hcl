@@ -1,10 +1,10 @@
 datacenter = "dc1"
 server = true
 data_dir = "/var/lib/consul/"
-bind_addr = "192.168.50.21"
+bind_addr = "192.168.1.21"
 bootstrap = true
 bootstrap_expect = 1
-client_addr = "192.168.50.21"
+client_addr = "192.168.1.21"
 
 ui_config {
     enabled = true
