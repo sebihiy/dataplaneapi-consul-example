@@ -22,7 +22,7 @@ Vagrant.configure("2") do |config|
     config.vm.define "consul-server" do |server|
       server.vm.box = "ubuntu/bionic64"
       server.vm.hostname = "consul-server"
-      server.vm.network "private_network", ip: "192.168.50.21"
+      server.vm.network "public_network", ip: "192.168.1.21"
       server.vm.provision "shell", inline: init_consul
     end
 
@@ -46,7 +46,7 @@ Vagrant.configure("2") do |config|
     config.vm.define "haproxy" do |server|
       server.vm.box = "ubuntu/bionic64"
       server.vm.hostname = "haproxy"
-      server.vm.network "private_network", ip: "192.168.50.20"
+      server.vm.network "public_network", ip: "192.168.1.20"
       server.vm.provision "shell", inline: init_haproxy
     end
 
@@ -77,7 +77,7 @@ Vagrant.configure("2") do |config|
     config.vm.define "webserver1" do |server|
       server.vm.box = "ubuntu/bionic64"
       server.vm.hostname = "webserver1"
-      server.vm.network "private_network", ip: "192.168.50.22"
+      server.vm.network "public_network", ip: "192.168.1.22"
       server.vm.provision "shell", inline: init_webserver
     end
    
